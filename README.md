@@ -1,6 +1,6 @@
 # ShopExpress — Sistema de microservicios para comercio electrónico
 
-**Tarea 2 – 2026 · Programa de Educación Terciaria CETP-UTU**
+**Tarea 2 – 2026 · ShopExpress**
 
 Implementación de tres microservicios en **Spring Boot 3 (Java 21)** con persistencia políglota en **MongoDB** y **Redis**, orquestación de transacciones distribuidas con el **patrón SAGA**, lógica de negocio estructurada con **Chain of Responsibility** y despliegue con **Docker Compose**.
 
