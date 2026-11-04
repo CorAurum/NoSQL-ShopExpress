@@ -1,0 +1,38 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: pedidos-service
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    default-property-inclusion: non_null
+  data:
+    mongodb:
+      uri: ${MONGO_URI:mongodb://localhost:27017/pedidos_db?w=majority}
+      auto-index-creation: true
+      field-naming-strategy: org.springframework.data.mapping.model.SnakeCaseFieldNamingStrategy
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      database: 2
+      timeout: 500ms
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+servicios:
+  usuarios:
+    url: ${USUARIOS_URL:http://localhost:8081}
+  catalogo:
+    url: ${CATALOGO_URL:http://localhost:8082}
+  http:
+    timeout-conexion-ms: 2000
+    timeout-lectura-ms: 5000
+
+pagos:
+  # La pasarela simulada rechaza montos mayores a este límite.
+  limite-aprobacion: ${PAGOS_LIMITE:5000.00}

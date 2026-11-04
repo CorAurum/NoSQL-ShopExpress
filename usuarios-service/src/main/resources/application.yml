@@ -1,0 +1,35 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: usuarios-service
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    default-property-inclusion: non_null
+  data:
+    mongodb:
+      uri: ${MONGO_URI:mongodb://localhost:27017/usuarios_db?w=majority}
+      auto-index-creation: true
+      field-naming-strategy: org.springframework.data.mapping.model.SnakeCaseFieldNamingStrategy
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      database: 0
+      timeout: 500ms
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  seed: ${SEED_DATA:true}
+  cache:
+    ttl-segundos: ${CACHE_TTL_SEGUNDOS:60}
+
+# Claves SOLO para desarrollo. En producción se inyectan desde un gestor de secretos.
+privacidad:
+  clave-aes: ${PRIVACIDAD_CLAVE_AES:6kS1FyGgJd/BYVOb7ZJeQu1FRViLPfoJqk1UwozaxjQ=}
+  clave-hmac: ${PRIVACIDAD_CLAVE_HMAC:71b55cb9a58f92fafe8391581cae446224a679abd7477773}

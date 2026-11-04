@@ -1,0 +1,87 @@
+name: shopexpress
+
+services:
+
+  # ---------------------------------------------------------------- bases de datos
+  mongo:
+    image: mongo:7
+    container_name: shopexpress-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: shopexpress-redis
+    # AOF activado: las claves de idempotencia sobreviven a un reinicio de Redis.
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ---------------------------------------------------------------- microservicios
+  usuarios-service:
+    build: ./usuarios-service
+    container_name: shopexpress-usuarios
+    ports:
+      - "8081:8081"
+    environment:
+      MONGO_URI: mongodb://mongo:27017/usuarios_db?w=majority
+      REDIS_HOST: redis
+      PRIVACIDAD_CLAVE_AES: ${PRIVACIDAD_CLAVE_AES:-6kS1FyGgJd/BYVOb7ZJeQu1FRViLPfoJqk1UwozaxjQ=}
+      PRIVACIDAD_CLAVE_HMAC: ${PRIVACIDAD_CLAVE_HMAC:-71b55cb9a58f92fafe8391581cae446224a679abd7477773}
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  catalogo-service:
+    build: ./catalogo-service
+    container_name: shopexpress-catalogo
+    ports:
+      - "8082:8082"
+    environment:
+      MONGO_URI: mongodb://mongo:27017/catalogo_db?w=majority
+      REDIS_HOST: redis
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  pedidos-service:
+    build: ./pedidos-service
+    container_name: shopexpress-pedidos
+    ports:
+      - "8083:8083"
+    environment:
+      MONGO_URI: mongodb://mongo:27017/pedidos_db?w=majority
+      REDIS_HOST: redis
+      USUARIOS_URL: http://usuarios-service:8081
+      CATALOGO_URL: http://catalogo-service:8082
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      usuarios-service:
+        condition: service_started
+      catalogo-service:
+        condition: service_started
+
+volumes:
+  mongo-data:
+  redis-data:

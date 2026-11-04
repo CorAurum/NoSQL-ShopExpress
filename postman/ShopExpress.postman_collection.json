@@ -1,0 +1,1209 @@
+{
+  "info": {
+    "name": "ShopExpress - Tarea 2",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Pruebas de los tres microservicios. Ejecutar en orden (Runner o newman): cada carpeta usa variables creadas por la anterior."
+  },
+  "item": [
+    {
+      "name": "1. Servicio de Usuarios",
+      "item": [
+        {
+          "name": "Crear usuario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{usuarios_url}}/api/usuarios",
+              "host": [
+                "{{usuarios_url}}"
+              ],
+              "path": [
+                "api",
+                "usuarios"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo_documento\": \"CI\",\n  \"nro_documento\": \"{{nro_documento}}\",\n  \"nombre\": \"Ana\",\n  \"apellido\": \"García\",\n  \"email\": \"{{email}}\",\n  \"direcciones\": [\n    {\n      \"calle\": \"18 de Julio 1234\",\n      \"ciudad\": \"Montevideo\",\n      \"codigo_postal\": \"11100\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const n = Date.now();",
+                  "pm.collectionVariables.set('email', `ana.${n}@example.com`);",
+                  "pm.collectionVariables.set('nro_documento', String(n).slice(-8));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const u = pm.response.json();",
+                  "pm.test('Tiene id con prefijo usr_', () => pm.expect(u.id).to.match(/^usr_/));",
+                  "pm.test('Documento enmascarado', () => pm.expect(u.nro_documento).to.match(/^\\*+\\d{3}$/));",
+                  "pm.test('Direcciones embebidas', () => pm.expect(u.direcciones).to.have.lengthOf(1));",
+                  "pm.collectionVariables.set('usuario_id', u.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear usuario con email duplicado (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{usuarios_url}}/api/usuarios",
+              "host": [
+                "{{usuarios_url}}"
+              ],
+              "path": [
+                "api",
+                "usuarios"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo_documento\": \"CI\",\n  \"nro_documento\": \"99999999\",\n  \"nombre\": \"Ana\",\n  \"apellido\": \"García\",\n  \"email\": \"{{email}}\",\n  \"direcciones\": [\n    {\n      \"calle\": \"Calle 1\",\n      \"ciudad\": \"Montevideo\",\n      \"codigo_postal\": \"11100\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));",
+                  "pm.test('Código EMAIL_DUPLICADO', () => pm.expect(pm.response.json().error).to.eql('EMAIL_DUPLICADO'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear usuario inválido (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{usuarios_url}}/api/usuarios",
+              "host": [
+                "{{usuarios_url}}"
+              ],
+              "path": [
+                "api",
+                "usuarios"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo_documento\": \"CI\",\n  \"nro_documento\": \"\",\n  \"nombre\": \"Ana\",\n  \"apellido\": \"García\",\n  \"email\": \"no-es-email\",\n  \"direcciones\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('Lista los errores', () => pm.expect(pm.response.json().detalles.length).to.be.at.least(3));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener usuario",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{usuarios_url}}/api/usuarios/{{usuario_id}}",
+              "host": [
+                "{{usuarios_url}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "{{usuario_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Es el usuario creado', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('usuario_id')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener usuario semilla usr_12345",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{usuarios_url}}/api/usuarios/usr_12345",
+              "host": [
+                "{{usuarios_url}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "usr_12345"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener usuario inexistente (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{usuarios_url}}/api/usuarios/usr_noexiste",
+              "host": [
+                "{{usuarios_url}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "usr_noexiste"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Exportar usuarios anonimizados (JSON)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{usuarios_url}}/api/usuarios/exportar?formato=json",
+              "host": [
+                "{{usuarios_url}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "exportar"
+              ],
+              "query": [
+                {
+                  "key": "formato",
+                  "value": "json"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const datos = pm.response.json();",
+                  "pm.test('Devuelve registros', () => pm.expect(datos.length).to.be.above(0));",
+                  "pm.test('Sin datos identificatorios', () => {",
+                  "  const r = datos[0];",
+                  "  pm.expect(r).to.not.have.property('nombre');",
+                  "  pm.expect(r).to.not.have.property('apellido');",
+                  "  pm.expect(r).to.not.have.property('id');",
+                  "  pm.expect(r.email_enmascarado).to.include('*');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Exportar usuarios anonimizados (CSV)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{usuarios_url}}/api/usuarios/exportar?formato=csv",
+              "host": [
+                "{{usuarios_url}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "exportar"
+              ],
+              "query": [
+                {
+                  "key": "formato",
+                  "value": "csv"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Content-Type CSV', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('text/csv'));",
+                  "pm.test('Encabezado correcto', () => pm.expect(pm.response.text().split('\\n')[0]).to.include('id_seudonimo'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Servicio de Catálogo e Inventario",
+      "item": [
+        {
+          "name": "Crear producto (stock 10)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{catalogo_url}}/api/productos",
+              "host": [
+                "{{catalogo_url}}"
+              ],
+              "path": [
+                "api",
+                "productos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"{{sku}}\",\n  \"nombre\": \"Mouse inalámbrico\",\n  \"descripcion\": \"Producto de prueba\",\n  \"categoria\": {\n    \"codigo\": \"TEST\",\n    \"nombre\": \"Pruebas\"\n  },\n  \"precio\": 40.0,\n  \"stock_inicial\": 10,\n  \"atributos\": {\n    \"color\": \"azul\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('sku', 'MOU-' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const p = pm.response.json();",
+                  "pm.test('Stock inicial 10', () => pm.expect(p.stock_disponible).to.eql(10));",
+                  "pm.test('Categoría embebida', () => pm.expect(p.categoria.codigo).to.eql('TEST'));",
+                  "pm.collectionVariables.set('producto_id', p.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear producto escaso (stock 2)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{catalogo_url}}/api/productos",
+              "host": [
+                "{{catalogo_url}}"
+              ],
+              "path": [
+                "api",
+                "productos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"{{sku_escaso}}\",\n  \"nombre\": \"Webcam HD\",\n  \"descripcion\": \"Producto de prueba\",\n  \"categoria\": {\n    \"codigo\": \"TEST\",\n    \"nombre\": \"Pruebas\"\n  },\n  \"precio\": 60.0,\n  \"stock_inicial\": 2,\n  \"atributos\": {\n    \"color\": \"azul\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('sku_escaso', 'CAM-' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('producto_escaso_id', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear producto con SKU duplicado (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{catalogo_url}}/api/productos",
+              "host": [
+                "{{catalogo_url}}"
+              ],
+              "path": [
+                "api",
+                "productos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"{{sku}}\",\n  \"nombre\": \"Otro\",\n  \"descripcion\": \"Producto de prueba\",\n  \"categoria\": {\n    \"codigo\": \"TEST\",\n    \"nombre\": \"Pruebas\"\n  },\n  \"precio\": 10.0,\n  \"stock_inicial\": 1,\n  \"atributos\": {\n    \"color\": \"azul\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener producto y stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catalogo_url}}/api/productos/{{producto_id}}",
+              "host": [
+                "{{catalogo_url}}"
+              ],
+              "path": [
+                "api",
+                "productos",
+                "{{producto_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Incluye stock', () => pm.expect(pm.response.json()).to.have.property('stock_disponible'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener producto inexistente (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catalogo_url}}/api/productos/prod_noexiste",
+              "host": [
+                "{{catalogo_url}}"
+              ],
+              "path": [
+                "api",
+                "productos",
+                "prod_noexiste"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Servicio de Pedidos y Pagos (SAGA + CoR)",
+      "item": [
+        {
+          "name": "SAGA exitosa: crear pedido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{pedidos_url}}/api/pedidos",
+              "host": [
+                "{{pedidos_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario_id\": \"{{usuario_id}}\",\n  \"items\": [\n    {\n      \"producto_id\": \"{{producto_id}}\",\n      \"cantidad\": 2\n    }\n  ],\n  \"pago\": {\n    \"metodo\": \"TARJETA_CREDITO\",\n    \"token_tarjeta\": \"tok_visa_ok\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const p = pm.response.json();",
+                  "pm.test('Estado CONFIRMADO', () => pm.expect(p.estado).to.eql('CONFIRMADO'));",
+                  "pm.test('Pago APROBADO', () => pm.expect(p.pago.estado_pago).to.eql('APROBADO'));",
+                  "pm.test('Total calculado con precio del catálogo', () => pm.expect(Number(p.total)).to.eql(80));",
+                  "pm.test('Pasos de la cadena en orden', () => {",
+                  "  const pasos = p.pasos_saga.map(x => x.paso);",
+                  "  pm.expect(pasos).to.eql(['VALIDAR_DATOS','VALIDAR_USUARIO','VALIDAR_STOCK','CALCULAR_TOTAL','CREAR_PEDIDO','RESERVAR_STOCK','PROCESAR_PAGO','CONFIRMAR_PEDIDO','REGISTRAR_HISTORIAL']);",
+                  "});",
+                  "pm.collectionVariables.set('pedido_id', p.pedido_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar stock descontado (10 - 2 = 8)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catalogo_url}}/api/inventario/stock/{{producto_id}}",
+              "host": [
+                "{{catalogo_url}}"
+              ],
+              "path": [
+                "api",
+                "inventario",
+                "stock",
+                "{{producto_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('stock_disponible = 8', () => pm.expect(pm.response.json().stock_disponible).to.eql(8));",
+                  "pm.test('stock_reservado = 0', () => pm.expect(pm.response.json().stock_reservado).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar historial del usuario",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{usuarios_url}}/api/usuarios/{{usuario_id}}",
+              "host": [
+                "{{usuarios_url}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "{{usuario_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const ids = (pm.response.json().historial_compras || []).map(h => h.pedido_id);",
+                  "pm.test('El pedido figura en el historial', () => pm.expect(ids).to.include(pm.collectionVariables.get('pedido_id')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar pedido y bitácora SAGA",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{pedidos_url}}/api/pedidos/{{pedido_id}}",
+              "host": [
+                "{{pedidos_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos",
+                "{{pedido_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Tiene pasos_saga', () => pm.expect(pm.response.json().pasos_saga.length).to.be.above(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock insuficiente (409, sin sobreventa)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{pedidos_url}}/api/pedidos",
+              "host": [
+                "{{pedidos_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario_id\": \"{{usuario_id}}\",\n  \"items\": [\n    {\n      \"producto_id\": \"{{producto_escaso_id}}\",\n      \"cantidad\": 5\n    }\n  ],\n  \"pago\": {\n    \"metodo\": \"TARJETA_CREDITO\",\n    \"token_tarjeta\": \"tok_visa_ok\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));",
+                  "pm.test('Código STOCK_INSUFICIENTE', () => pm.expect(pm.response.json().error).to.eql('STOCK_INSUFICIENTE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pago rechazado -> compensa la reserva (402)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{pedidos_url}}/api/pedidos",
+              "host": [
+                "{{pedidos_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario_id\": \"{{usuario_id}}\",\n  \"items\": [\n    {\n      \"producto_id\": \"{{producto_id}}\",\n      \"cantidad\": 1\n    }\n  ],\n  \"pago\": {\n    \"metodo\": \"TARJETA_CREDITO\",\n    \"token_tarjeta\": \"tok_rechazada\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('402 Payment Required', () => pm.response.to.have.status(402));",
+                  "const body = pm.response.json();",
+                  "pm.test('Código PAGO_RECHAZADO', () => pm.expect(body.error).to.eql('PAGO_RECHAZADO'));",
+                  "pm.test('Pedido CANCELADO', () => pm.expect(body.pedido.estado).to.eql('CANCELADO'));",
+                  "pm.test('Se liberó la reserva', () => {",
+                  "  const c = body.pedido.pasos_saga.find(x => x.paso === 'COMPENSAR_RESERVAR_STOCK');",
+                  "  pm.expect(c.resultado).to.eql('COMPENSADO');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar stock restaurado tras pago rechazado (8)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catalogo_url}}/api/inventario/stock/{{producto_id}}",
+              "host": [
+                "{{catalogo_url}}"
+              ],
+              "path": [
+                "api",
+                "inventario",
+                "stock",
+                "{{producto_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('stock_disponible = 8', () => pm.expect(pm.response.json().stock_disponible).to.eql(8));",
+                  "pm.test('stock_reservado = 0', () => pm.expect(pm.response.json().stock_reservado).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Fallo tras el cobro -> reembolso + liberación (500)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Simular-Fallo",
+                "value": "CONFIRMACION"
+              }
+            ],
+            "url": {
+              "raw": "{{pedidos_url}}/api/pedidos",
+              "host": [
+                "{{pedidos_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario_id\": \"{{usuario_id}}\",\n  \"items\": [\n    {\n      \"producto_id\": \"{{producto_id}}\",\n      \"cantidad\": 1\n    }\n  ],\n  \"pago\": {\n    \"metodo\": \"TARJETA_CREDITO\",\n    \"token_tarjeta\": \"tok_visa_ok\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('500 (fallo simulado)', () => pm.response.to.have.status(500));",
+                  "const p = pm.response.json().pedido;",
+                  "pm.test('Pedido CANCELADO', () => pm.expect(p.estado).to.eql('CANCELADO'));",
+                  "pm.test('Pago REEMBOLSADO', () => pm.expect(p.pago.estado_pago).to.eql('REEMBOLSADO'));",
+                  "pm.test('Compensaciones en orden inverso', () => {",
+                  "  const comp = p.pasos_saga.filter(x => x.paso.startsWith('COMPENSAR_')).map(x => x.paso);",
+                  "  pm.expect(comp).to.eql(['COMPENSAR_PROCESAR_PAGO','COMPENSAR_RESERVAR_STOCK','COMPENSAR_CREAR_PEDIDO']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar stock restaurado tras compensación (8)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catalogo_url}}/api/inventario/stock/{{producto_id}}",
+              "host": [
+                "{{catalogo_url}}"
+              ],
+              "path": [
+                "api",
+                "inventario",
+                "stock",
+                "{{producto_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('stock_disponible = 8', () => pm.expect(pm.response.json().stock_disponible).to.eql(8));",
+                  "pm.test('stock_reservado = 0', () => pm.expect(pm.response.json().stock_reservado).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Datos inválidos (400, ValidadorDeDatos)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{pedidos_url}}/api/pedidos",
+              "host": [
+                "{{pedidos_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario_id\": \"\",\n  \"items\": [\n    {\n      \"producto_id\": \"{{producto_id}}\",\n      \"cantidad\": 0\n    }\n  ],\n  \"pago\": {\n    \"metodo\": \"EFECTIVO\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('Código DATOS_INVALIDOS', () => pm.expect(pm.response.json().error).to.eql('DATOS_INVALIDOS'));",
+                  "pm.test('No se creó pedido', () => pm.expect(pm.response.json()).to.not.have.property('pedido'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Usuario inexistente (404, ValidadorDeUsuario)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{pedidos_url}}/api/pedidos",
+              "host": [
+                "{{pedidos_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario_id\": \"usr_noexiste\",\n  \"items\": [\n    {\n      \"producto_id\": \"{{producto_id}}\",\n      \"cantidad\": 1\n    }\n  ],\n  \"pago\": {\n    \"metodo\": \"TRANSFERENCIA\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Idempotencia: primer envío",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idem_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{pedidos_url}}/api/pedidos",
+              "host": [
+                "{{pedidos_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario_id\": \"{{usuario_id}}\",\n  \"items\": [\n    {\n      \"producto_id\": \"{{producto_id}}\",\n      \"cantidad\": 1\n    }\n  ],\n  \"pago\": {\n    \"metodo\": \"TARJETA_CREDITO\",\n    \"token_tarjeta\": \"tok_visa_ok\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('idem_key', 'idem-' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('pedido_idem_id', pm.response.json().pedido_id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Idempotencia: reenvío con la misma clave (no duplica)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idem_key}}"
+              }
+            ],
+            "url": {
+              "raw": "{{pedidos_url}}/api/pedidos",
+              "host": [
+                "{{pedidos_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario_id\": \"{{usuario_id}}\",\n  \"items\": [\n    {\n      \"producto_id\": \"{{producto_id}}\",\n      \"cantidad\": 1\n    }\n  ],\n  \"pago\": {\n    \"metodo\": \"TARJETA_CREDITO\",\n    \"token_tarjeta\": \"tok_visa_ok\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK (respuesta repetida)', () => pm.response.to.have.status(200));",
+                  "pm.test('Cabecera Idempotent-Replayed', () => pm.expect(pm.response.headers.get('Idempotent-Replayed')).to.eql('true'));",
+                  "pm.test('Mismo pedido', () => pm.expect(pm.response.json().pedido_id).to.eql(pm.collectionVariables.get('pedido_idem_id')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar que la idempotencia descontó una sola vez (7)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{catalogo_url}}/api/inventario/stock/{{producto_id}}",
+              "host": [
+                "{{catalogo_url}}"
+              ],
+              "path": [
+                "api",
+                "inventario",
+                "stock",
+                "{{producto_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('stock_disponible = 7', () => pm.expect(pm.response.json().stock_disponible).to.eql(7));",
+                  "pm.test('stock_reservado = 0', () => pm.expect(pm.response.json().stock_reservado).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar pedidos del usuario",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{pedidos_url}}/api/pedidos?usuario_id={{usuario_id}}",
+              "host": [
+                "{{pedidos_url}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ],
+              "query": [
+                {
+                  "key": "usuario_id",
+                  "value": "{{usuario_id}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Al menos 4 pedidos', () => pm.expect(pm.response.json().length).to.be.at.least(4));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "usuarios_url",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "catalogo_url",
+      "value": "http://localhost:8082"
+    },
+    {
+      "key": "pedidos_url",
+      "value": "http://localhost:8083"
+    },
+    {
+      "key": "usuario_id",
+      "value": ""
+    },
+    {
+      "key": "email",
+      "value": ""
+    },
+    {
+      "key": "nro_documento",
+      "value": ""
+    },
+    {
+      "key": "sku",
+      "value": ""
+    },
+    {
+      "key": "sku_escaso",
+      "value": ""
+    },
+    {
+      "key": "producto_id",
+      "value": ""
+    },
+    {
+      "key": "producto_escaso_id",
+      "value": ""
+    },
+    {
+      "key": "pedido_id",
+      "value": ""
+    },
+    {
+      "key": "idem_key",
+      "value": ""
+    },
+    {
+      "key": "pedido_idem_id",
+      "value": ""
+    }
+  ]
+}

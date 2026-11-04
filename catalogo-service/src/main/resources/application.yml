@@ -1,0 +1,30 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: catalogo-service
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    default-property-inclusion: non_null
+  data:
+    mongodb:
+      uri: ${MONGO_URI:mongodb://localhost:27017/catalogo_db?w=majority}
+      auto-index-creation: true
+      field-naming-strategy: org.springframework.data.mapping.model.SnakeCaseFieldNamingStrategy
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      database: 1
+      timeout: 500ms
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  seed: ${SEED_DATA:true}
+  cache:
+    ttl-segundos: ${CACHE_TTL_SEGUNDOS:30}
